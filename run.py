@@ -130,12 +130,11 @@ def run_simulation(
         )   
     elif algo == 'fedadp':
         fl.simulation.start_simulation(
-           
-            learning_rate       = exp_config['learning_rate'],
             client_fn           = base_client_fn,
             num_clients         = exp_config['num_clients'],
             config              = fl.server.ServerConfig(num_rounds=exp_config['num_round']),
             strategy            = FedAdp(
+                learning_rate       = exp_config['learning_rate'],
                 exp_name            = exp_config['exp_name'],
                 algo_name           = algo,
                 net                 = net,
@@ -151,11 +150,11 @@ def run_simulation(
         )   
     elif algo == 'fedavg': 
         fl.simulation.start_simulation(
-            learning_rate       = exp_config['learning_rate'],
             client_fn           = base_client_fn, 
             num_clients         = exp_config['num_clients'],
             config              = fl.server.ServerConfig(num_rounds=exp_config['num_round']),
             strategy            = FedAvg(
+                learning_rate       = exp_config['learning_rate'],
                 exp_name            = exp_config['exp_name'],
                 algo_name           = algo,
                 net                 = net,
@@ -170,11 +169,11 @@ def run_simulation(
         )
     elif algo == 'scaffold': 
         fl.simulation.start_simulation(
-            learning_rate       = exp_config['learning_rate'],
             client_fn           = scaffold_client_fn,
             num_clients         = exp_config['num_clients'],
             config              = fl.server.ServerConfig(num_rounds=exp_config['num_round']),
             strategy            = SCAFFOLD(
+                learning_rate       = exp_config['learning_rate'],
                 exp_name            = exp_config['exp_name'],
                 algo_name           = algo,
                 net                 = net,
@@ -190,11 +189,11 @@ def run_simulation(
         )
     elif algo == 'moon': 
         fl.simulation.start_simulation(
-            learning_rate       = exp_config['learning_rate'],
             client_fn           = moon_client_fn, 
             num_clients         = exp_config['num_clients'], 
             config              = fl.server.ServerConfig(num_rounds = exp_config['num_round']), 
             strategy            = MOON(
+                learning_rate       = exp_config['learning_rate'],
                 exp_name            = exp_config['exp_name'],
                 algo_name           = algo, 
                 net                 = net,

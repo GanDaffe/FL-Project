@@ -79,7 +79,7 @@ if __name__ == '__main__':
                                                 experiment_config['num_clients'], 
                                                 dist, 
                                                 distance=experiment_config['cluster_distance'], 
-                                                min_smp=5,
+                                                min_smp=10,
                                                 xi=0.3)
 
     num_cluster = len(list(set(client_cluster_index.values())))
