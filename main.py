@@ -80,7 +80,7 @@ if __name__ == '__main__':
                                                 dist, 
                                                 distance=experiment_config['cluster_distance'], 
                                                 min_smp=5,
-                                                xi=0.2)
+                                                xi=0.3)
 
     num_cluster = len(list(set(client_cluster_index.values())))
     print(f'Number of Clusters: {num_cluster}')

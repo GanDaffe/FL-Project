@@ -68,11 +68,11 @@ def run_simulation(
     elif algo == 'fedadpimp': 
         assert entropies != None, f'Entropies for {algo} cannnot be none'
         fl.simulation.start_simulation(
-            exp_name            = exp_config['exp_name'],
             client_fn           = cluster_fed_client_fn,
             num_clients         = exp_config['num_clients'],
             config              = fl.server.ServerConfig(num_rounds=exp_config['num_round']),
             strategy            = BoxFedv2(
+                exp_name            = exp_config['exp_name'],
                 learning_rate       = exp_config['learning_rate'],
                 algo_name           = algo,
                 net                 = net,
