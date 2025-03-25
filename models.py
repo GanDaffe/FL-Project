@@ -22,7 +22,8 @@ class CNN(nn.Module):
         self.conv2 = nn.Conv2d(32, 64, kernel_size=3, stride=1, padding=1)
         out = calculate(out, 3, 1, 1)
         out = calculate(out, kernel=2, stride=2, padding=0)
-        
+
+        self.dropout = nn.Dropout(p=0.5)
         self.after_conv = out * out * 64
         self.fc1 = nn.Linear(in_features=self.after_conv, out_features=hidden) 
         self.fc2 = nn.Linear(in_features=hidden, out_features=out_feat) 
@@ -32,8 +33,8 @@ class CNN(nn.Module):
         X = self.pool(F.relu(self.conv2(X)))
 
         X = X.view(-1, self.after_conv)
-
         X = F.relu(self.fc1(X))
+        X = self.dropout(X)
         X = F.relu(self.fc2(X))
 
         return X
@@ -68,6 +69,7 @@ class fMLP(nn.Module):
         self.layer1 = nn.Linear(28*28, 200)
         self.layer2 = nn.Linear(200, 200)
         self.layer3 = nn.Linear(200, 10)
+        self.dropout = nn.Dropout(p=0.5)
         self.relu = nn.ReLU()
 
     def forward(self, x: torch.Tensor) -> torch.Tensor:
@@ -76,6 +78,7 @@ class fMLP(nn.Module):
         x = self.relu(x)
         x = self.layer2(x)
         x = self.relu(x)
+        x = self.dropout(x)
         x = self.layer3(x)
         return x
 
