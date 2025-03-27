@@ -6,7 +6,7 @@ class FedImp(FedAvg):
         self,
         *args,
         entropies: List[float],
-        temperature: float = 1.5,
+        temperature: float = 0.5,
         **kwargs
     ) -> None:
         super().__init__(*args, **kwargs)
