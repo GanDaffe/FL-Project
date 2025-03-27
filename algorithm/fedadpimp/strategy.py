@@ -60,7 +60,7 @@ class BoxFedv2(FedAvg):
         cluster_data = {}
 
         for client_res in results:
-            client, fit_res = client_res
+            _, fit_res = client_res
             cluster_id = fit_res.metrics["cluster_id"]
             if cluster_id not in cluster_data:
                 cluster_data[cluster_id] = []
@@ -110,8 +110,8 @@ class BoxFedv2(FedAvg):
             self.current_angles[id] = smoothed_angles[i]
 
         maps = self.alpha*(1-np.exp(-np.exp(-self.alpha*(np.array(smoothed_angles)-1))))
-
-        weights = num_examples * np.exp(maps) / sum(num_examples * np.exp(maps))
+        
+        weights = [(num_examples[i] / len(cluster_data[i])) * np.exp(maps[i]) / sum(num_examples[i] * np.exp(maps[i])) for i in cluster_data.keys()]
 
         parameters_aggregated = np.sum(weights.reshape(len(weights), 1) * np.array(weights_results, dtype=object), axis=0)
 
