@@ -50,7 +50,7 @@ if __name__ == '__main__':
         'cluster_distance':         'hellinger', # hellinger / jensenshannon / cosine ... for fedadpimp experiment only
         'alpha':                    100, 
         'beta':                     0.01, 
-        'learning_rate':            0.0001,
+        'learning_rate':            0.001,
         'device':                   DEVICE
     }
 
@@ -82,7 +82,7 @@ if __name__ == '__main__':
                                                 min_smp=10,
                                                 xi=0.3)
 
-    num_cluster = len(list(set(client_cluster_index.values())))
+    num_cluster = len(list(set(client_cluster_index.values()))) - 1
     print(f'Number of Clusters: {num_cluster}')
     
     inc = 1
