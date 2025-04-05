@@ -157,11 +157,18 @@ def load_data(dataset: str):
     return trainset, testset
 
 def build_distribution(dist, noise_level=0.05):
-    distrib_ = np.array([np.array(d) / sum(d) for d in dist])
+    distrib_ = []
+    for d in dist:
+        total = sum(d.values())
+        if total > 0:
+            distrib_.append(np.array(list(d.values())) / total)
+        else:
+            distrib_.append(np.zeros(len(d)))
+
+    distrib_ = np.array(distrib_)
     noise = np.random.normal(loc=0.0, scale=noise_level, size=distrib_.shape)
     distrib_ += noise
-    distrib_ = np.clip(distrib_, 1e-8, 1.0)
-    distrib_ = distrib_ / distrib_.sum(axis=1, keepdims=True)
+
     return distrib_
 
 def clustering(dist, min_smp=3, xi=0.2, distance='manhattan', noise_level=0.05):
