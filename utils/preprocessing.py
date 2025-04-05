@@ -156,10 +156,14 @@ def load_data(dataset: str):
 
     return trainset, testset
 
-def clustering(classes, data_size, num_clients, dist, min_smp=3, xi=0.2, distance='manhattan'):
+def clustering(classes, data_size, num_clients, dist, min_smp=3, xi=0.2, distance='manhattan', noise_level=0.05):
     distrib_ = []
     for d in dist:
       distrib_.append(np.array([d[s] / (data_size / num_clients) if d[s] is not None else 0 for s in classes]))
+
+    distrib_ = np.array(distrib_) 
+    noise = np.random.normal(loc=0.0, scale=noise_level, size=distrib_.shape)
+    distrib_ += noise
 
     if distance == 'hellinger':
         optics = OPTICS(min_samples=min_smp,
