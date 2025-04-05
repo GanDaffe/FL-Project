@@ -168,6 +168,8 @@ def build_distribution(dist, noise_level=0.05):
     distrib_ = np.array(distrib_)
     noise = np.random.normal(loc=0.0, scale=noise_level, size=distrib_.shape)
     distrib_ += noise
+    distrib_ = np.clip(distrib_, 1e-10, 1.0)
+    distrib_ = distrib_ / distrib_.sum(axis=1, keepdims=True)
 
     return distrib_
 
