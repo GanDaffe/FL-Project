@@ -74,10 +74,7 @@ if __name__ == '__main__':
                                beta=experiment_config['beta'], 
                                dataset_name=experiment_config['dataset_name'])
 
-    client_cluster_index, distrib_ = clustering(trainset.classes, 
-                                                len(trainset), 
-                                                experiment_config['num_clients'], 
-                                                dist, 
+    client_cluster_index, distrib_ = clustering(dist, 
                                                 distance=experiment_config['cluster_distance'], 
                                                 min_smp=10,
                                                 xi=0.3)
