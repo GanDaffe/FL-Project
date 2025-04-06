@@ -6,7 +6,7 @@ class BoxFedv2(FedAvg):
     def __init__(self, 
                  *args, 
                  entropies: List[float], 
-                 temperature: float = 1.5, 
+                 temperature: float = 0.5, 
                  alpha: int = 5, 
                  **kwargs
     ): 
