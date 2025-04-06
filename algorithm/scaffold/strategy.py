@@ -34,7 +34,7 @@ class SCAFFOLD(FedAvg):
         # Serialize c_global to be compatible with config FitIns return values
         c_global = []
         for param in self.c_global:
-            c_global += param.flatten().tolist()  # Flatten all params
+            c_global += param.cpu().flatten().tolist()  # Flatten all params
             
         global_c_numpy = np.array(c_global, dtype=np.float64)
         global_c_bytes = global_c_numpy.tobytes()
@@ -69,7 +69,7 @@ class SCAFFOLD(FedAvg):
             current_weight += fed_weight * self.global_learning_rate
 
         # Initalize c_delta_sum for the weight average
-        c_delta_sum = [np.zeros_like(c_global) for c_global in self.c_global]
+        c_delta_sum = [np.zeros_like(c_global.cpu()) for c_global in self.c_global]
 
         for _, fit_res in results:
             # Getting serialized buffer from fit metrics 
