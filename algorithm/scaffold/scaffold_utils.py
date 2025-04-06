@@ -32,7 +32,7 @@ def test_scaffold(net, testloader):
     device = 'cuda' if torch.cuda.is_available() else 'cpu'
     """Validate the model on the test set."""
     criterion = torch.nn.CrossEntropyLoss()
-    correct, loss = 0, 0.0
+    correct, loss, tot = 0, 0.0, 0
     with torch.no_grad():
         for images, labels in testloader:
             images = images.to(device)
@@ -40,6 +40,8 @@ def test_scaffold(net, testloader):
             outputs = net(images)
             loss += criterion(outputs, labels).item()
             correct += (torch.max(outputs.data, 1)[1] == labels).sum().item()
-    accuracy = correct / len(testloader.dataset)
-    loss = loss / len(testloader)
+            tot += images.shape[0]
+            
+    accuracy = correct / len(tot)
+    loss = loss / len(tot)
     return loss, accuracy

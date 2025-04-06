@@ -13,7 +13,7 @@ class SCAFFOLD_CLIENT(BaseClient):
         """Train the model with data of this client."""
         set_parameters(self.net, parameters)
         lr = config['learning_rate']
-        self.optimizer = torch.optim.SGD(self.net.parameters(), lr=lr, momentum=0.9)
+        self.optimizer = torch.optim.SGD(self.net.parameters(), lr=lr)
 
         results = self.train_scaffold(
             net=self.net,
