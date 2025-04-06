@@ -1,7 +1,6 @@
 from algorithm.base.client import BaseClient 
 from import_lib import * 
 from algorithm.moon.moon_utils import *
-from utils.train_helper import load_config
 
 class MoonClient(BaseClient):
 
@@ -13,7 +12,6 @@ class MoonClient(BaseClient):
         else:
             self.dir = f'{dir}_{self.cid}'
         
-        self.exp_config = load_config()
         self.initial_parameters = self.net
 
     def fit(
@@ -22,9 +20,7 @@ class MoonClient(BaseClient):
 
         temperature = config["temperature"]
         learning_rate = config["learning_rate"]
-        epochs = self.exp_config['var_min_epochs']
-        mu = self.exp_config['optimizer']['mu']
-
+      
         set_parameters(self.net, parameters)
         if not os.path.exists(self.dir):
             os.makedirs(self.dir)
@@ -47,9 +43,7 @@ class MoonClient(BaseClient):
                             global_net,
                             prev_net,
                             self.trainloader,
-                            epochs,
                             learning_rate,
-                            mu,
                             temperature,
                             device=config['device']
                      )

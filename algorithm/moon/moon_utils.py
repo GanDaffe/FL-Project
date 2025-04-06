@@ -82,11 +82,11 @@ def train_moon(
     global_net,
     previous_net,
     train_dataloader,
-    epochs,
     lr,
-    mu,
     temperature,
     device="cpu",
+    epochs=1,
+    mu=0.005,
 ):
     """Training function for MOON."""
     net.to(device)
