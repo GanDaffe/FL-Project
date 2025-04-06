@@ -1,20 +1,12 @@
 from algorithm.base.client import BaseClient 
 from import_lib import * 
 from algorithm.fednova.fednova_utils import * 
-from utils.train_helper import load_config
 
 class FedNovaClient(BaseClient):
     def __init__(self, *args, ratio, **kwargs):
         super().__init__(*args, **kwargs)
         self.ratio = ratio
-        self.client_config = load_config()
-        self.optimizer = ProxSGD(params=self.net.parameters(),
-                                 lr=self.client_config['optimizer']['lr'],
-                                 momentum=self.client_config['optimizer']['momentum'],
-                                 mu=self.client_config['optimizer']['mu'],
-
-                                 ratio=self.ratio)
-
+        
     def get_parameters(self, config: Dict[str, Scalar]) -> NDArrays:
         """Return the parameters of the current net."""
         params = [
@@ -23,15 +15,13 @@ class FedNovaClient(BaseClient):
         ]
         return params
 
-    def set_parameters(self, parameters):
+    def set_parameters(self, parameters, lr):
         state_dict = {name: torch.tensor(param) for name, param in zip(self.net.state_dict().keys(), parameters)}
         self.net.load_state_dict(state_dict)
 
         self.optimizer = ProxSGD(
             params=self.net.parameters(),
-            lr=self.client_config['optimizer']['lr'],
-            momentum=self.client_config['optimizer']['momentum'],
-            mu=self.client_config['optimizer']['mu'],
+            lr=lr,
             ratio=self.ratio
         )
   
@@ -41,11 +31,10 @@ class FedNovaClient(BaseClient):
 
     def fit(self, parameters, config):
 
-        if self.client_config['optimizer']['lr'] != config['learning_rate']: 
-            self.client_config['optimizer']['lr'] = config['learning_rate'] 
+        lr = config['learning_rate'] 
 
-        self.set_parameters(parameters)
-        num_epochs = self.client_config['var_min_epochs']
+        self.set_parameters(parameters, lr)
+        num_epochs = 1
 
         train_loss, train_acc = train_fednova(
             self.net,
@@ -53,7 +42,6 @@ class FedNovaClient(BaseClient):
             self.trainloader,
             config['device'],
             num_epochs,
-            proximal_mu=self.client_config['optimizer']['mu'],
         )
 
         grad_scaling_factor = self.optimizer.get_gradient_scaling()
