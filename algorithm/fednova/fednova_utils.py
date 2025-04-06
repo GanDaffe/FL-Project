@@ -204,11 +204,11 @@ def train_fednova(
             loss.backward()
             optimizer.step()
 
-            total_loss += loss.item() * target.shape(0)
+            total_loss += loss.item() * target.shape[0]
 
             pred = output.argmax(dim=1)
             total_correct += (pred == target).sum().item()
-            total_samples += target.shape(0)
+            total_samples += target.shape[0]
 
     avg_loss = total_loss / total_samples
     accuracy = total_correct / total_samples
@@ -240,11 +240,11 @@ def test_fednova(model, test_loader, device, *args) -> Tuple[float, Dict[str, fl
 
             outputs = model(data)
             loss = criterion(outputs, target).item()
-            total_loss += loss * target.size(0)
+            total_loss += loss * target.shape[0]
 
             pred = outputs.argmax(dim=1)
             total_correct += (pred == target).sum().item()
-            total_samples += target.size(0)
+            total_samples += target.shape[0]
 
     avg_loss = total_loss / total_samples
     accuracy = total_correct / total_samples
