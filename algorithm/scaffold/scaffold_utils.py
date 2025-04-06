@@ -41,7 +41,7 @@ def test_scaffold(net, testloader):
             loss += criterion(outputs, labels).item()
             correct += (torch.max(outputs.data, 1)[1] == labels).sum().item()
             tot += images.shape[0]
-            
-    accuracy = correct / len(tot)
-    loss = loss / len(tot)
+
+    accuracy = correct / tot
+    loss = loss / tot
     return loss, accuracy
