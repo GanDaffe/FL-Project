@@ -26,7 +26,7 @@ def run_simulation(
         return BaseClient(cid, net, trainloaders[idx], criterion).to_client()
     def fednova_client_fn(cid: str):
         idx = int(cid)
-        return FedNovaClient(idx, net, trainloaders[idx], criterion, ratio=client_dataset_ratio).to_client()   
+        return FedNovaClient(cid, net, trainloaders[idx], criterion, ratio=client_dataset_ratio).to_client()   
     def cluster_fed_client_fn(cid: str) -> ClusterFedClient:
         idx = int(cid)
         return ClusterFedClient(cid, net, trainloaders[idx], criterion, cluster_id=client_cluster_index[idx]).to_client()   
