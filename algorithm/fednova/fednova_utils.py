@@ -168,113 +168,88 @@ class ProxSGD(torch.optim.Optimizer):  # pylint: disable=too-many-instance-attri
             param_group["lr"] = lr
 
 
-def comp_accuracy(output, target, topk=(1,)):
-    """Compute accuracy over the k top predictions wrt the target."""
-    with torch.no_grad():
-        maxk = max(topk)
-        batch_size = target.size(0)
-
-        _, pred = output.topk(maxk, 1, True, True)
-        pred = pred.t()
-        correct = pred.eq(target.view(1, -1).expand_as(pred))
-
-        res = []
-        for k in topk:
-            correct_k = correct[:k].view(-1).float().sum(0, keepdim=True)
-            res.append(correct_k.mul_(100.0 / batch_size))
-        return res
-
-
 def train_fednova(
     model, optimizer, trainloader, device, epochs, proximal_mu=0.0
 ) -> Tuple[float, float]:
     """Train the client model for one round of federated learning."""
     criterion = nn.CrossEntropyLoss()
     model = model.to(device)
+
     if proximal_mu > 0.0:
         global_params = [val.detach().clone() for val in model.parameters()]
     else:
         global_params = None
-    model.train()
 
-    train_losses = []
-    train_accuracy = []
+    model.train()
+    total_loss = 0.0
+    total_correct = 0
+    total_samples = 0
+
     for _epoch in range(epochs):
-        for _batch_idx, (data, target) in enumerate(trainloader):
-            # data loading
+        for data, target in trainloader:
             data = data.to(device)
             target = target.to(device)
 
             optimizer.zero_grad()
-
-            # forward pass
             output = model(data)
 
             if global_params is None:
                 loss = criterion(output, target)
             else:
-                # Proximal updates for FedProx
                 proximal_term = 0.0
-                for local_weights, global_weights in zip(
-                    model.parameters(), global_params
-                ):
-                    proximal_term += torch.square(
-                        (local_weights - global_weights).norm(2)
-                    )
+                for local_weights, global_weights in zip(model.parameters(), global_params):
+                    proximal_term += torch.square((local_weights - global_weights).norm(2))
                 loss = criterion(output, target) + (proximal_mu / 2) * proximal_term
 
-            # backward pass
             loss.backward()
-
-            # gradient step
             optimizer.step()
 
-            # write log files
-            acc = comp_accuracy(output, target)
-            # acc = comp_accuracy(output, target, topk=(1, 5))
+            total_loss += loss.item() * target.shape(0)
 
-            # print(type(acc))  # <class 'list'>
-            # print(type(acc[0]))  # <class 'torch.Tensor'>
-            # print(acc[0].shape) 
+            pred = output.argmax(dim=1)
+            total_correct += (pred == target).sum().item()
+            total_samples += target.shape(0)
 
-            train_losses.append(loss.item())
-            train_accuracy.append(acc[0].item())
+    avg_loss = total_loss / total_samples
+    accuracy = total_correct / total_samples
 
-    train_loss = sum(train_losses) / len(train_losses)
-    train_acc = sum(train_accuracy) / len(train_accuracy)
+    return avg_loss, accuracy
 
-    return train_loss, train_acc
 
 
 def test_fednova(model, test_loader, device, *args) -> Tuple[float, Dict[str, float]]:
-    """Evaluate the federated model on a test set.
+    """Evaluate the federated model on a test set."""
 
-    The server Strategy(FedNova, FedAvg, FedProx) uses the same method to compute
-    centralized evaluation on test set using the args. args[0]: int = server round
-    args[1]: List[NDArray] = server model parameters args[2]: Dict = {}
-    """
     criterion = nn.CrossEntropyLoss()
     if len(args) > 1:
-        # load the model parameters
         params_dict = zip(model.state_dict().keys(), args[1])
         state_dict = OrderedDict({k: torch.Tensor(v) for k, v in params_dict})
         model.load_state_dict(state_dict)
 
     model = model.to(device)
     model.eval()
-    accuracy = []
+
     total_loss = 0.0
+    total_correct = 0
+    total_samples = 0
 
     with torch.no_grad():
         for data, target in test_loader:
             data = data.to(device)
             target = target.to(device)
-            outputs = model(data)
-            total_loss += criterion(outputs, target).item()
-            acc1 = comp_accuracy(outputs, target)
-            accuracy.append(acc1[0].item())
 
-    total_loss /= len(test_loader)
-    return total_loss, {"accuracy": sum(accuracy) / len(accuracy)}
+            outputs = model(data)
+            loss = criterion(outputs, target).item()
+            total_loss += loss * target.size(0)
+
+            pred = outputs.argmax(dim=1)
+            total_correct += (pred == target).sum().item()
+            total_samples += target.size(0)
+
+    avg_loss = total_loss / total_samples
+    accuracy = total_correct / total_samples
+
+    return avg_loss, {"accuracy": accuracy}
+
 
 

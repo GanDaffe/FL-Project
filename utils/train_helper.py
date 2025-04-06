@@ -133,22 +133,3 @@ def compute_entropy(counts: Dict):
     for value in counts:
         entropy += -value/sum(counts) * math.log(value/sum(counts), len(counts)) if value != 0 else 0
     return entropy
-
-def load_config(): 
-    """
-    For fednova and moon
-    """
-    client_config =  {
-        "var_local_epochs":         True,  # Whether to use variable local epochs
-        "var_min_epochs":           1,  # Minimum number of local epochs
-        "var_max_epochs":           5,  # Maximum number of local epochs
-        "seed":                     42,  # Random seed for reproducibility
-        "optimizer": {
-            "gmf":      0, 
-            "lr":       0.0001,  # Learning rate
-            "momentum": 0.9,  # Momentum for SGD
-            "mu":       0.005,  # Proximal term (adjusted in FedNovaClient if needed)
-        }
-    }
-
-    return client_config
