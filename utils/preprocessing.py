@@ -115,18 +115,11 @@ def load_sentimen140():
     
     return trainset, testset
 
-def renormalize(dist: torch.tensor, labels: List[int], label: int) -> torch.tensor:
-    """Renormalize the distribution after setting the probability of a label to 0."""
+def renormalize(dist: torch.tensor, labels: List[int], label: int):
     idx = labels.index(label)
-
     dist[idx] = 0
-    
-    total = dist.sum()
-    if total > 0:
-        dist /= total
-    else:
-        dist = torch.zeros_like(dist)
-    
+    dist /= sum(dist)
+    dist = torch.concat((dist[:idx], dist[idx+1:]))
     return dist
 
 def build_distribution(dist, noise_level=0.05):
@@ -160,36 +153,7 @@ def clustering(dist, min_smp=3, xi=0.2, distance='manhattan', noise_level=0.05):
 
     return client_cluster_index, distrib_
 
-def get_non_iid_labels(dataset_name, num_classes):
-    """Return non-iid labels based on dataset name."""
-    if dataset_name == 'sentimen140':
-        return list(range(2))  
-    elif dataset_name == 'cifar10' or dataset_name == 'fmnist':
-        return random.sample(range(num_classes), 2)
-    elif dataset_name == 'emnist':
-        return list(range(10))
-    elif dataset_name == 'cifar100':
-        return random.sample(range(num_classes), 15)
-
-
-def create_client_indices(client_size, labels, indices_class, dist, dataset, classes_):
-    """Generate indices for a single client."""
-    client_indices = []
-    for _ in range(client_size):
-        if not labels:
-            break
-        label = random.choices(labels, dist)[0]
-        if indices_class[label]:
-            id_sample = random.choice(indices_class[label])
-            client_indices.append(id_sample)
-            indices_class[label].remove(id_sample)
-
-            if not indices_class[label]:
-                dist = renormalize(dist, labels, label)
-                labels.remove(label)
-    return client_indices
-
-def partition_data(dataset, _iid: int, non_iid_diff: int, num_clients: int, alpha: float, beta: float, dataset_name='cifar10'):
+def partition_data(dataset, _iid: int, non_iid_diff : int, num_clients: int, alpha: float, beta: float, dataset_name='cifar10'):
     assert _iid + non_iid_diff <= num_clients, 'Check num_iid, non_iid_diff and num_clients.'
 
     classes_ = dataset.classes
@@ -199,32 +163,67 @@ def partition_data(dataset, _iid: int, non_iid_diff: int, num_clients: int, alph
     label_size = len(dataset) // num_classes
 
     indices_class = [[] for _ in range(num_classes)]
+
     for i, lab in enumerate(dataset.targets):
         indices_class[lab].append(i)
 
-    non_iid_labels = get_non_iid_labels(dataset_name, num_classes)
-    non_iid_data = [index for label in non_iid_labels for index in indices_class[label]]
+    if dataset_name == 'sentimen140':
+        non_iid_labels = list(range(2))
+        id_non_iid_clients_size = client_size
 
-    ids, label_dist = [], []
+    elif dataset_name == 'cifar10' or dataset_name == 'fmnist':
+        non_iid_labels = random.sample(range(num_classes), 2)
+        id_non_iid_clients_size = client_size
+
+    elif dataset_name == 'emnist':
+        non_iid_labels = list(range(10))
+        id_non_iid_clients_size = client_size
+
+    elif dataset_name == 'cifar100':
+        non_iid_labels = random.sample(range(num_classes), 15)
+        id_non_iid_clients_size = client_size
+
+    non_iid_data = []
     labels = list(range(num_classes))
+
+    for label in non_iid_labels:
+        non_iid_data += indices_class[label]
+
+    ids = []
+    label_dist = []
 
     print('Processing non-iid and iid---')
     for i in tqdm(range(non_iid_diff + _iid)):
         concentration = torch.ones(len(labels)) * (alpha if i < _iid else beta)
         dist = Dirichlet(concentration).sample()
 
-        client_indices = create_client_indices(client_size, labels, indices_class, dist, dataset, classes_)
-        ids.append(client_indices)
-        counter = Counter([dataset[x][1] for x in client_indices])
-        label_dist.append({classes_[j]: counter.get(j, 0) for j in range(num_classes)})
+        client_indices = []
+        for _ in range(client_size):
+            if not labels:
+                break
 
+            label = random.choices(labels, dist)[0]
+            if indices_class[label]:
+                id_sample = random.choice(indices_class[label])
+                client_indices.append(id_sample)
+                indices_class[label].remove(id_sample)
+
+                if not indices_class[label]:
+                    dist = renormalize(dist, labels, label)
+                    labels.remove(label)
+
+        ids.append(client_indices)
+        counter = Counter(list(map(lambda x: dataset[x][1], ids[i])))
+        label_dist.append({classes_[j]: counter.get(j, 0) for j in range(num_classes)})
+    
     print('Processing identical distributed non-iid')
     for i in tqdm(range(non_iid_diff + _iid, num_clients)):
+
         temp_data = non_iid_data.copy()
-        id_sample = random.sample(temp_data, client_size)
+        id_sample = random.sample(temp_data, id_non_iid_clients_size)
         ids.append(id_sample)
 
-        counter = Counter([dataset[x][1] for x in id_sample])
+        counter = Counter(list(map(lambda x: dataset[x][1], ids[i])))
         label_dist.append({classes_[j]: counter.get(j, 0) for j in range(num_classes)})
 
     return ids, label_dist
