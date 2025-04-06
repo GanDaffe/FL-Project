@@ -81,7 +81,7 @@ class SCAFFOLD(FedAvg):
         for i in range(len(self.c_global)):
             # Aggregating the updates of c_global cf. Scaffold equation (n°5)
             c_delta_avg = c_delta_sum[i] / self.num_clients
-            self.c_global[i] += torch.tensor(c_delta_avg)
+            self.c_global[i] += torch.tensor(c_delta_avg, device=self.c_global[i].device)
             
         return ndarrays_to_parameters(self.current_weights), metrics_aggregated
     
