@@ -80,8 +80,8 @@ def load_data(dataset: str):
             trainset = dataset_class("data", train=True, download=True, transform=transform)
             testset = dataset_class("data", train=False, download=True, transform=transform)
         else:
-            trainset = dataset_class("data", split="balanced", train=True, download=True, transform=transform)
-            testset = dataset_class("data", split="balanced", train=False, download=True, transform=transform)
+            trainset = dataset_class("data", train=True, download=True, transform=transform)
+            testset = dataset_class("data", train=False, download=True, transform=transform)
 
         return trainset, testset
 
