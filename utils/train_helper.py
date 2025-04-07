@@ -1,5 +1,5 @@
 import numpy as np
-from collections import Counter, OrderedDict
+from collections import OrderedDict
 from typing import List, Dict
 import random
 import math
@@ -7,9 +7,7 @@ import copy
 import gc
 import torch
 import torch.nn as nn
-from torch.optim import SGD
-from models import CNN, LSTM, ResNet, ResidualBlock, VGG16, ResNet101, ResNet50, fMLP
-from tqdm import tqdm 
+from models import CNN, LSTM, VGG16, ResNet101, ResNet50, fMLP
 
 seed_value = 42
 random.seed(seed_value)
@@ -33,7 +31,7 @@ def get_model(model_name, model_config):
     elif model_name == 'resnet50': 
         model = ResNet50(num_channel=model_config['in_shape'], num_classes=model_config['out_shape'])
     elif model_name == 'resnet101': 
-        model = ResNet50(num_channel=model_config['in_shape'], num_classes=model_config['out_shape'])
+        model = ResNet101(num_channel=model_config['in_shape'], num_classes=model_config['out_shape'])
     elif model_name == 'vgg16':
         model = VGG16(in_channels=model_config['in_shape'], num_classes=model_config['out_shape'])
     elif model_name == 'lstm': 

@@ -128,7 +128,6 @@ class ResNet101(nn.Module):
         return x
 
 
-    
 class CustomDataset(torch.utils.data.Dataset):
     def __init__(self, data, targets, transform=None):
         self.data = data
