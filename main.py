@@ -43,8 +43,9 @@ if __name__ == '__main__':
         'non_iids':                 50, 
         'model_name':               'mlp'
     }
+
     experiment_config = {
-        'exp_name':                 f'{run_config["dataset_name"]}_({run_config["iids"]}, {run_config["non_iids"]})_{run_config['model_name']}',
+        'exp_name':                 f'{run_config["dataset_name"]}_({run_config["iids"]}, {run_config["non_iids"]})_{run_config["model_name"]}',
         'algo':                     'fedadpimp',  #All letters in lowercase, no space
         'num_round':                500, 
         'iids':                     run_config['iids'], 
@@ -57,24 +58,24 @@ if __name__ == '__main__':
 
     model_config = {
         'model_name':               run_config['model_name'], 
-        'out_shape':                output_size[experiment_config['dataset_name']], 
-        'in_shape':                 input_size[experiment_config['dataset_name']],
+        'out_shape':                output_size[run_config['dataset_name']], 
+        'in_shape':                 input_size[run_config['dataset_name']],
         'hidden':                   32,
-        'im_size':                  size_img[experiment_config['dataset_name']]
+        'im_size':                  size_img[run_config['dataset_name']]
     }
 
     # ----------- LOADING THE DATA -------------
 
 
-    ids, dist, trainloaders, testloader, client_dataset_ratio = get_train_data(dataset_name=experiment_config['dataset_name'], 
+    ids, dist, trainloaders, testloader, client_dataset_ratio = get_train_data(dataset_name=run_config['dataset_name'], 
                                                                                num_iids=run_config['iids'], 
                                                                                num_non_iids=run_config['non_iids'],
                                                                                batch_size=experiment_config['batch_size']
                                                                             )
     client_cluster_index, distrib_ = clustering(dist, 
                                                 distance=experiment_config['cluster_distance'], 
-                                                min_smp=10,
-                                                xi=0.3)
+                                                min_smp=2,
+                                                xi=0.1)
 
     num_cluster = len(list(set(client_cluster_index.values()))) - 1
     print(f'Number of Clusters: {num_cluster}')
@@ -107,4 +108,3 @@ if __name__ == '__main__':
         model_config,
         client_dataset_ratio
     )
-    
