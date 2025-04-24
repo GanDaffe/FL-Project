@@ -1,7 +1,7 @@
 import flwr as fl
 import torch
-from torch.utils.data import DataLoader, random_split, SubsetRandomSampler
-from utils.preprocessing import load_data, partition_data, clustering
+from torch.utils.data import DataLoader, SubsetRandomSampler
+from utils.preprocessing import get_train_data, clustering
 from utils.train_helper import compute_entropy
 from run import run_simulation
 from torch import nn
@@ -37,25 +37,26 @@ if __name__ == '__main__':
 
     # ---------- HYPER PARAMETERS -------------
 
-
+    run_config = {
+        'dataset_name':             'fmnist',  # emnist / fmnist / cifar10 / cifar100 / sentimen140 (take long time to load)
+        'iids':                     10, 
+        'non_iids':                 50, 
+        'model_name':               'mlp'
+    }
     experiment_config = {
-        'exp_name':                 'fmnist_(10,20,20)_mlp',
+        'exp_name':                 f'{run_config["dataset_name"]}_({run_config["iids"]}, {run_config["non_iids"]})_{run_config['model_name']}',
         'algo':                     'fedadpimp',  #All letters in lowercase, no space
         'num_round':                500, 
-        'num_clients':              50, 
-        'iids':                     10, 
-        'diff_non_iid':             20, # normal non-iid = num_clients - (iids + diff_non_iid)
+        'iids':                     run_config['iids'], 
+        'num_clients':              run_config['iids'] + run_config['non_iids'],
         'batch_size':               100,
-        'dataset_name':             'fmnist',  # emnist / fmnist / cifar10 / cifar100 / sentimen140 (take long time to load)
         'cluster_distance':         'hellinger', # hellinger / jensenshannon / cosine ... for fedadpimp experiment only
-        'alpha':                    100, 
-        'beta':                     0.01, 
-        'learning_rate':            0.001,
+        'learning_rate':            0.1,
         'device':                   DEVICE
     }
 
     model_config = {
-        'model_name':               'cnn', 
+        'model_name':               run_config['model_name'], 
         'out_shape':                output_size[experiment_config['dataset_name']], 
         'in_shape':                 input_size[experiment_config['dataset_name']],
         'hidden':                   32,
@@ -65,15 +66,11 @@ if __name__ == '__main__':
     # ----------- LOADING THE DATA -------------
 
 
-    trainset, testset = load_data(experiment_config['dataset_name'])
-    ids, dist = partition_data(trainset, 
-                               num_clients=experiment_config['num_clients'], 
-                               _iid=experiment_config['iids'], 
-                               non_iid_diff=experiment_config['diff_non_iid'], 
-                               alpha=experiment_config['alpha'], 
-                               beta=experiment_config['beta'], 
-                               dataset_name=experiment_config['dataset_name'])
-
+    ids, dist, trainloaders, testloader, client_dataset_ratio = get_train_data(dataset_name=experiment_config['dataset_name'], 
+                                                                               num_iids=run_config['iids'], 
+                                                                               num_non_iids=run_config['non_iids'],
+                                                                               batch_size=experiment_config['batch_size']
+                                                                            )
     client_cluster_index, distrib_ = clustering(dist, 
                                                 distance=experiment_config['cluster_distance'], 
                                                 min_smp=10,
@@ -95,13 +92,7 @@ if __name__ == '__main__':
         print(f"Client {i+1}: {dist[i]}")
 
     entropies = [compute_entropy(dist[i]) for i in range(experiment_config['num_clients'])]
-    trainloaders = []
-    testloader = DataLoader(testset, batch_size=experiment_config['batch_size'])
 
-    for i in range(experiment_config['num_clients']):
-        trainloaders.append(DataLoader(trainset, batch_size=experiment_config['batch_size'], sampler=SubsetRandomSampler(ids[i])))
-
-    client_dataset_ratio: float = int((len(trainset) / experiment_config['num_clients'])) / len(trainset)
 
     # ------------ RUN SIMULATION ---------------
     
