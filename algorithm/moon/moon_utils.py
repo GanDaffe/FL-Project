@@ -53,9 +53,7 @@ def train_moon(
     train_acc, _ = compute_accuracy(net, train_dataloader, device=device)
     optimizer = torch.optim.SGD(
         filter(lambda p: p.requires_grad, net.parameters()),
-        lr=lr,
-        momentum=0.9,
-        weight_decay=1e-5,
+        lr=lr
     )
 
     criterion = nn.CrossEntropyLoss().cuda()
@@ -111,7 +109,6 @@ def train_moon(
         epoch_loss = sum(epoch_loss_collector) / len(epoch_loss_collector)
         epoch_loss1 = sum(epoch_loss1_collector) / len(epoch_loss1_collector)
         epoch_loss2 = sum(epoch_loss2_collector) / len(epoch_loss2_collector)
-        print(f"Epoch: {epoch} - Loss: {epoch_loss:.4f} - Loss1: {epoch_loss1:.4f} - Loss2: {epoch_loss2:.4f}")
 
     previous_net.to("cpu")
     train_acc, _ = compute_accuracy(net, train_dataloader, device=device)
@@ -125,6 +122,5 @@ def test_moon(net, test_dataloader, device="cpu"):
     """Test function."""
     net.to(device)
     test_acc, loss = compute_accuracy(net, test_dataloader, device=device)
-    print(f">> Test accuracy: {test_acc:.6f}")
     net.to("cpu")
     return test_acc, loss

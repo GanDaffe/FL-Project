@@ -32,7 +32,7 @@ class MOON(FedAvg):
         test_net = copy.deepcopy(self.net)
         set_parameters(test_net, parameters_to_ndarrays(parameters))
         
-        loss, accuracy = test_moon(test_net, self.testloader, self.device)
+        accuracy, loss = test_moon(test_net, self.testloader, self.device)
 
         if server_round != 0:  
             self.result["test_loss"].append(loss)

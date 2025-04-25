@@ -28,7 +28,7 @@ class MLP_header(nn.Module):
         return x
         
 class CNN_header(nn.Module): 
-    def __init__(self, in_feat, im_size, out_feat, hidden): 
+    def __init__(self, in_feat, im_size, hidden): 
         
         super(CNN_header, self).__init__()
         out = im_size 
@@ -97,8 +97,8 @@ class ModelMoon(nn.Module):
             else: 
                 model = ResNet101(num_channel=model_configs['in_shape'], num_classes=n_classes) 
             
-            self.features = nn.Sequential(*list(model.children())[:-1])
-            num_ftrs = model.fc.in_features
+            self.features = nn.Sequential(*list(model.resnet.children())[:-1])
+            num_ftrs = model.resnet.fc.in_features
         elif base_model == 'lstm': 
             self.features = LSTM_header()
             num_ftrs = 256 
