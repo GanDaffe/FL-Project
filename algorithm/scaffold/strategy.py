@@ -6,13 +6,11 @@ class SCAFFOLD(FedAvg):
     def __init__(
         self,
         *args,
-        weight_decay=0.1, 
         **kwargs, 
     ) -> None:
         super().__init__(*args, **kwargs)
 
        
-        self.weight_decay = weight_decay
 
         self.c_global = [torch.zeros_like(param) for param in self.net.parameters()]
         self.current_weights = parameters_to_ndarrays(self.current_parameters)
@@ -67,7 +65,8 @@ class SCAFFOLD(FedAvg):
         # Aggregating the updates of y_delta to current weight cf. Scaffold equation (n°5)
         for current_weight, fed_weight in zip(self.current_weights, fedavg_weights_aggregate):
             current_weight += fed_weight * self.global_learning_rate
-
+            
+        self.global_learning_rate = self.global_learning_rate * self.decay_rate
         # Initalize c_delta_sum for the weight average
         c_delta_sum = [np.zeros_like(c_global.cpu()) for c_global in self.c_global]
 

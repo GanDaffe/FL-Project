@@ -75,7 +75,7 @@ if __name__ == '__main__':
     client_cluster_index, distrib_ = clustering(dist, 
                                                 distance=experiment_config['cluster_distance'], 
                                                 min_smp=2,
-                                                xi=0.1)
+                                                xi=0.15)
 
     num_cluster = len(list(set(client_cluster_index.values()))) - 1
     print(f'Number of Clusters: {num_cluster}')

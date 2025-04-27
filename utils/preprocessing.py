@@ -194,12 +194,39 @@ def partition_data(dataset, _iid: int, non_iid_diff : int, num_clients: int, alp
 
     return ids, label_dist
 
+def partition_data_special_case(trainset, num_clients: int, num_iids: int):
+    classes = trainset.classes
+    client_size = int(len(trainset)/num_clients)
+    label_size = int(len(trainset)/len(classes))
+    data = list(map(lambda x: (trainset[x][1], x), range(len(trainset))))
+    data.sort()
+    data = list(map(lambda x: data[x][1], range(len(data))))
+    
+    grouped_data = [data[i*label_size:(i+1)*label_size] for i in range(len(classes))]
+    non_iid_labels = random.sample(range(len(classes)), 2) if len(classes) == 10 else list(range(10))
+    non_iid_data = []
+    for label in non_iid_labels:
+        non_iid_data += grouped_data[label]
+
+    ids = []
+    label_dist = []
+    for i in range(num_clients):
+        temp_data = data if i < num_iids else non_iid_data
+        id = random.sample(temp_data, client_size)
+        ids.append(id)
+        
+        counter = Counter(list(map(lambda x: trainset[x][1], ids[i])))
+        label_dist.append({classes[i]: counter.get(i, 0) for i in range(len(classes))})
+
+    return ids, label_dist
+    
 def get_train_data(dataset_name, 
                    num_iids: int, 
                    num_non_iids, 
                    num_folds: int = 3, 
                    batch_size = 100,
-                   alpha: list = [0.7, 0.9, 1]):
+                   alpha: list = [0.7, 0.9, 1], 
+                   special_case = False):
 
     trainset, testset = load_data(dataset_name)
     FOLDS = num_folds
@@ -241,17 +268,23 @@ def get_train_data(dataset_name,
     for i in range(FOLDS):
         sub_set = partition_fold[i]
         data = trainset.data[sub_set.indices]
-        targets = trainset.targets[sub_set.indices].tolist()
+        if dataset_name == 'cifar10':
+            targets = [trainset.targets[idx] for idx in sub_set.indices]
+        else: 
+            targets = trainset.targets[sub_set.indices].tolist()
         sub_dataset = CustomDataset(data, targets)
         
-        id, dist = partition_data(
-            sub_dataset,
-            iids_per_fold[i],
-            non_iids_per_fold[i],
-            clients_per_fold[i],
-            alpha[i], 0.01,
-            classes, dataset_name
-        )
+        if special_case: 
+            id, dist = partition_data_special_case(sub_dataset, clients_per_fold[i], iids_per_fold[i])
+        else: 
+            id, dist = partition_data(
+                sub_dataset,
+                iids_per_fold[i],
+                non_iids_per_fold[i],
+                clients_per_fold[i],
+                alpha[i], 0.01,
+                classes, dataset_name
+            )
 
         ids.extend(id)
         labels_dist.extend(dist)

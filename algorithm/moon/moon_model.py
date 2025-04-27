@@ -10,20 +10,15 @@ class MLP_header(nn.Module):
         super(MLP_header, self).__init__()
         self.layer1 = nn.Linear(28*28, 200)
         self.layer2 = nn.Linear(200, 200)
-
-        self.dropout1 = nn.Dropout(p=0.3)
-        self.dropout2 = nn.Dropout(p=0.5)
         self.relu = nn.ReLU()
 
     def forward(self, x):
         x = x.view(-1, 28 * 28)
         x = self.layer1(x)
         x = self.relu(x)
-        x = self.dropout1(x) 
 
         x = self.layer2(x)
         x = self.relu(x)
-        x = self.dropout2(x)
         
         return x
         

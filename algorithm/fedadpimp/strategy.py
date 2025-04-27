@@ -8,7 +8,7 @@ class BoxFedv2(FedAvg):
                  *args, 
                  entropies: List[float], 
                  temperature: float = 0.5, 
-                 lambda_kurt: float = 0.9,  
+                 lambda_kurt: float = 3.0,  
                  beta0: float = 0.6,
                  alpha: int = 5, 
                  **kwargs
@@ -39,9 +39,7 @@ class BoxFedv2(FedAvg):
 
         distance = wasserstein_distance(flat, global_flat)
     
-        beta = self.beta0 * np.exp(-self.lambda_kurt * distance)
-        print(f"beta: {beta}, Wasserstein Distance: {distance}")
-        
+        beta = self.beta0 * np.exp(-self.lambda_kurt * distance)        
        
         interpolated_params = [
             beta * g + (1 - beta) * c 
