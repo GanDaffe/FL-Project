@@ -40,27 +40,24 @@ class CNN(nn.Module):
         return X
 
 class LSTM(nn.Module):
-
     def __init__(self):
         super(LSTM, self).__init__()
         self.embedding = nn.Embedding(2000, 50)
-        self.lstm = nn.LSTM(input_size=50, hidden_size=64)
-
+        self.lstm = nn.LSTM(input_size=50, hidden_size=64, batch_first=True)
         self.fc1 = nn.Linear(64, 256)
         self.relu = nn.ReLU()
         self.dropout = nn.Dropout(0.5)
-        self.fc2 = nn.Linear(256, 1)
-        self.sigmoid = nn.Sigmoid()
+        self.fc2 = nn.Linear(256, 2) 
 
     def forward(self, x):
-        x = self.embedding(x)
-        lstm_out, _ = self.lstm(x)
-        lstm_out = lstm_out[:, -1, :]
-        x = self.fc1(lstm_out)
+        x = self.embedding(x)          
+        lstm_out, _ = self.lstm(x)    
+        lstm_out = lstm_out[:, -1, :]    
+        x = self.fc1(lstm_out)         
         x = self.relu(x)
         x = self.dropout(x)
-        x = self.fc2(x)
-        return self.sigmoid(x)
+        x = self.fc2(x)                
+        return x 
 
 class fMLP(nn.Module):
     def __init__(self) -> None:
