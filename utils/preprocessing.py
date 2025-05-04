@@ -20,6 +20,7 @@ from tensorflow.keras.preprocessing.text import Tokenizer
 from tensorflow.keras.preprocessing.sequence import pad_sequences
 from torch.utils.data import DataLoader, random_split, SubsetRandomSampler
 from utils.distance import hellinger, jensen_shannon_divergence_distance
+from datasets import load_dataset 
 
 def clean_text(tweet):
     urlPattern = r"((http://)[^ ]*|(https://)[^ ]*|(www\.)[^ ]*)"
@@ -43,6 +44,18 @@ def clean_text(tweet):
     tweet = ' '.join([word if ('$' not in word) and ('&' not in word) else '' for word in tweet.split(' ')])
     tweet = re.sub("\s\s+", " ", tweet)
     return tweet.strip()
+
+def get_data_sent140(dataset, source='train'):
+
+    root = dataset[source]
+
+    keep = ['text', 'sentiment']
+    data = {key: root[key] for key in keep}
+
+    data['text'] = [clean_text(tweet) for tweet in data['text']]
+    data['sentiment'] = [1 if sentiment == 4 else 0 for sentiment in data['sentiment']] 
+
+    return data
 
 def get_transform(dataset_name):
     if dataset_name in ['cifar10', 'cifar100']:
@@ -86,33 +99,25 @@ def load_data(dataset: str):
         return trainset, testset
 
 def load_sentimen140():
-    file_path = Path("/content/dataset/training.1600000.processed.noemoticon.csv")
-    if not file_path.exists():
-        file_id = '1AN_svT4t-3U7otJjavvy-2SCXBX-NyBb'
-        output_path = "dataset.zip"
-        gdown.download(f"https://drive.google.com/uc?id={file_id}", output_path, quiet=False)
+    dataset = load_dataset("sentiment140")
 
-        with zipfile.ZipFile("dataset.zip", "r") as zip_ref:
-            zip_ref.extractall("dataset")
-
-    df = pd.read_csv(file_path, names=['label', 'id', 'date', 'flag', 'user', 'text'], encoding='latin1')
-    df = df[['label', 'text']]
-    df['label'] = df['label'].replace({4: 1})
-    df['preprocessing_text'] = df['text'].apply(clean_text)
+    traindata = get_data_sent140(dataset, source='train')
+    testdata = get_data_sent140(dataset, source='test')
 
     max_words = 2000
     max_len = 500
     tokenizer = Tokenizer(num_words=max_words)
-    tokenizer.fit_on_texts(df['text'])
-    sequences = tokenizer.texts_to_sequences(df['preprocessing_text'])
+    tokenizer.fit_on_texts(traindata['text'])
 
-    X = pad_sequences(sequences, maxlen=max_len)
-    y = df['label'].values
-    X_train, X_test, y_train, y_test = train_test_split(X, y, test_size=0.2, random_state=42)
+    train_sequences = tokenizer.texts_to_sequences(traindata['text'])
+    test_sequences = tokenizer.texts_to_sequences(testdata['text'])
 
-    trainset = CustomDataset(X_train, y_train)
-    testset = CustomDataset(X_test, y_test)
-    
+    train_padded = torch.from_numpy(pad_sequences(train_sequences, maxlen=max_len, padding='post', truncating='post'))
+    test_padded = torch.from_numpy(pad_sequences(test_sequences, maxlen=max_len, padding='post', truncating='post'))
+
+    trainset = CustomDataset(train_padded, traindata['sentiment'])
+    testset = CustomDataset(test_padded, testdata['sentiment'])
+
     return trainset, testset
 
 def renormalize(dist: torch.tensor, labels: List[int], label: int):
