@@ -12,7 +12,6 @@ from sklearn.cluster import OPTICS
 from models import CustomDataset
 from tqdm import tqdm 
 import string
-import gdown
 from sklearn.model_selection import train_test_split
 import zipfile
 from pathlib import Path
