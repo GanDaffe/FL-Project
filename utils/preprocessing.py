@@ -20,7 +20,7 @@ from tensorflow.keras.preprocessing.sequence import pad_sequences
 from torch.utils.data import DataLoader, random_split, SubsetRandomSampler
 from utils.distance import hellinger, jensen_shannon_divergence_distance
 from datasets import load_dataset 
-
+import re
 def clean_text(tweet):
     urlPattern = r"((http://)[^ ]*|(https://)[^ ]*|(www\.)[^ ]*)"
     userPattern = '@[^\s]+'
@@ -96,6 +96,10 @@ def load_data(dataset: str):
         return trainset, testset
 
 def load_sentimen140():
+    from huggingface_hub import login
+    token = 'ep1'
+    login(token=token)
+    
     dataset = load_dataset("sentiment140")['train']
 
     root_data = preprocess_text(dataset)
@@ -106,11 +110,16 @@ def load_sentimen140():
     tokenizer.fit_on_texts(root_data['text'])
 
     seq = tokenizer.texts_to_sequences(root_data['text'])
-
+    
     padded_dataset = torch.from_numpy(pad_sequences(seq, maxlen=max_len, padding='post', truncating='post'))
-    data = CustomDataset(padded_dataset, root_data['sentiment'])
+    labels = root_data['sentiment']
+    
+    train_data, test_data, train_labels, test_labels = train_test_split(
+        padded_dataset, labels, test_size=0.2, random_state=42, stratify=labels
+    )
 
-    trainset, testset = train_test_split(data, test_size=0.2, random_state=42)
+    trainset = CustomDataset(train_data, train_labels)
+    testset = CustomDataset(test_data, test_labels)
 
     return trainset, testset
 
@@ -224,7 +233,7 @@ def get_train_data(dataset_name,
                    num_non_iids, 
                    num_folds: int = 3, 
                    batch_size = 100,
-                   alpha: list = [0.7, 0.9, 1], 
+                   alpha: list = [1, 3, 5], 
                    special_case = False):
 
     trainset, testset = load_data(dataset_name)
@@ -266,10 +275,12 @@ def get_train_data(dataset_name,
 
     for i in range(FOLDS):
         sub_set = partition_fold[i]
-        data = trainset.data[sub_set.indices]
-        if dataset_name == 'cifar10':
+        
+        if dataset_name in ['cifar10', 'cifar100','sentimen140']:
+            data = [trainset.data[idx] for idx in sub_set.indices]
             targets = [trainset.targets[idx] for idx in sub_set.indices]
         else: 
+            data = trainset.data[sub_set.indices]
             targets = trainset.targets[sub_set.indices].tolist()
         sub_dataset = CustomDataset(data, targets)
         
@@ -281,7 +292,7 @@ def get_train_data(dataset_name,
                 iids_per_fold[i],
                 non_iids_per_fold[i],
                 clients_per_fold[i],
-                alpha[i], 0.01,
+                alpha[i], 0.05,
                 classes, dataset_name
             )
 
