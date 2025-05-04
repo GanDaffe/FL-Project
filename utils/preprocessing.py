@@ -45,9 +45,7 @@ def clean_text(tweet):
     tweet = re.sub("\s\s+", " ", tweet)
     return tweet.strip()
 
-def get_data_sent140(dataset, source='train'):
-
-    root = dataset[source]
+def preprocess_text(root):
 
     keep = ['text', 'sentiment']
     data = {key: root[key] for key in keep}
@@ -99,24 +97,21 @@ def load_data(dataset: str):
         return trainset, testset
 
 def load_sentimen140():
-    dataset = load_dataset("sentiment140")
+    dataset = load_dataset("sentiment140")['train']
 
-    traindata = get_data_sent140(dataset, source='train')
-    testdata = get_data_sent140(dataset, source='test')
+    root_data = preprocess_text(dataset)
 
     max_words = 2000
     max_len = 500
     tokenizer = Tokenizer(num_words=max_words)
-    tokenizer.fit_on_texts(traindata['text'])
+    tokenizer.fit_on_texts(root_data['text'])
 
-    train_sequences = tokenizer.texts_to_sequences(traindata['text'])
-    test_sequences = tokenizer.texts_to_sequences(testdata['text'])
+    seq = tokenizer.texts_to_sequences(root_data['text'])
 
-    train_padded = torch.from_numpy(pad_sequences(train_sequences, maxlen=max_len, padding='post', truncating='post'))
-    test_padded = torch.from_numpy(pad_sequences(test_sequences, maxlen=max_len, padding='post', truncating='post'))
+    padded_dataset = torch.from_numpy(pad_sequences(seq, maxlen=max_len, padding='post', truncating='post'))
+    data = CustomDataset(padded_dataset, root_data['sentiment'])
 
-    trainset = CustomDataset(train_padded, traindata['sentiment'])
-    testset = CustomDataset(test_padded, testdata['sentiment'])
+    trainset, testset = train_test_split(data, test_size=0.2, random_state=42)
 
     return trainset, testset
 
