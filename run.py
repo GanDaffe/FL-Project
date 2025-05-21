@@ -19,7 +19,7 @@ def run_simulation(
     algo = exp_config['algo']
     device = exp_config['device'] 
     model_name = model_config['model_name']
-    
+
     net = init_model(model_name, model_config).to(device) if algo == 'moon' else get_model(model_name, model_config).to(device)
 
     def base_client_fn(cid: str): 
@@ -60,7 +60,6 @@ def run_simulation(
                 device              = device,
                 num_rounds          = exp_config['num_round'],
                 num_clients         = exp_config['num_clients'],
-                iids                = exp_config['iids'],
                 current_parameters  = current_parameters,
             ),
 
@@ -81,7 +80,6 @@ def run_simulation(
                 device              = device,
                 num_rounds          = exp_config['num_round'],
                 num_clients         = exp_config['num_clients'],
-                iids                = exp_config['iids'],
                 current_parameters  = current_parameters,
                 entropies           = entropies,
                 ),
@@ -102,7 +100,6 @@ def run_simulation(
                 device              = device,
                 num_rounds          = exp_config['num_round'],
                 num_clients         = exp_config['num_clients'],
-                iids                = exp_config['iids'],
                 current_parameters  = current_parameters,
                             ),
             client_resources    = client_resources
@@ -122,7 +119,6 @@ def run_simulation(
                 device              = device,
                 num_rounds          = exp_config['num_round'],
                 num_clients         = exp_config['num_clients'],
-                iids                = exp_config['iids'],
                 current_parameters  = current_parameters,
                 entropies           = entropies,
                 ),
@@ -143,7 +139,6 @@ def run_simulation(
                 device              = device,
                 num_rounds          = exp_config['num_round'],
                 num_clients         = exp_config['num_clients'],
-                iids                = exp_config['iids'],
                 current_parameters  = current_parameters,
                             ),
 
@@ -163,7 +158,6 @@ def run_simulation(
                 device              = device,
                 num_rounds          = exp_config['num_round'],
                 num_clients         = exp_config['num_clients'],
-                iids                = exp_config['iids'],
                 current_parameters  = current_parameters,
                 ),
             client_resources     = client_resources
@@ -182,7 +176,6 @@ def run_simulation(
                 device              = device,
                 num_rounds          = exp_config['num_round'],
                 num_clients         = exp_config['num_clients'],
-                iids                = exp_config['iids'],
                 current_parameters  = current_parameters,
             ),
 
@@ -202,7 +195,6 @@ def run_simulation(
                 device              = device,
                 num_rounds          = exp_config['num_round'], 
                 num_clients         = exp_config['num_clients'], 
-                iids                = exp_config['iids'], 
                 current_parameters  = current_parameters
 
                 ),

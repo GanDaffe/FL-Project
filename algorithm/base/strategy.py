@@ -10,7 +10,6 @@ class FedAvg(fl.server.strategy.Strategy):
             num_rounds: int,
             num_clients: int,
             testloader, 
-            iids,
             device,
             decay_rate: float = 0.995,
             fraction_fit: float = 1.0,
@@ -34,7 +33,6 @@ class FedAvg(fl.server.strategy.Strategy):
         self.min_evaluate_clients = min_evaluate_clients
         self.min_available_clients = min_available_clients
         self.learning_rate = learning_rate
-        self.iids = iids,
         self.current_parameters = current_parameters
         self.testloader = testloader
         self.device = device

@@ -1,6 +1,5 @@
 from algorithm.base.strategy import FedAvg 
 from import_lib import * 
-from scipy.stats import wasserstein_distance
 
 class BoxFedv2(FedAvg): 
 
@@ -8,45 +7,21 @@ class BoxFedv2(FedAvg):
                  *args, 
                  entropies: List[float], 
                  temperature: float = 0.5, 
-                 lambda_kurt: float = 3.0,  
-                 beta0: float = 0.6,
-                 alpha: int = 5, 
+                 alpha: float = 0.3, 
                  **kwargs
     ): 
         super().__init__(*args, **kwargs) 
 
-        self.entropies = entropies      
+        self.entropies = entropies
         self.temperature = temperature 
-        self.lambda_kurt = lambda_kurt
-        self.beta0 = beta0
         self.alpha = alpha 
         self.current_angles = {}
 
     
     def __repr__(self): 
         return 'FedAdpImp'
-        
-    def flatten_parameters(self, parameters):
-        return np.concatenate([p.flatten() for p in parameters])
     
-    def norm_weights(self, params):
-        c_params = parameters_to_ndarrays(params)
-        flat = self.flatten_parameters(c_params)
-        
-        global_params = parameters_to_ndarrays(self.current_parameters)
-        global_flat = self.flatten_parameters(global_params)
-        
-
-        distance = wasserstein_distance(flat, global_flat)
     
-        beta = self.beta0 * np.exp(-self.lambda_kurt * distance)        
-       
-        interpolated_params = [
-            beta * g + (1 - beta) * c 
-            for c, g in zip(c_params, global_params)
-        ]
-        return interpolated_params
-        
     def aggregate_cluster(self, cluster_id, cluster_clients: List[FitRes]):
         weight_results = [(parameters_to_ndarrays(fit_res.parameters),
                             fit_res.num_examples * np.exp(self.entropies[int(fit_res.metrics["id"])]/self.temperature))
@@ -58,7 +33,7 @@ class BoxFedv2(FedAvg):
         accuracy = sum(correct) / sum(examples)
 
         aggregated_params = ndarrays_to_parameters(aggregate(weight_results))
-        aggregated_params = ndarrays_to_parameters(self.norm_weights(aggregated_params))
+
         total_examples = sum(fit_res.num_examples for fit_res in cluster_clients)
 
         representative_metrics = dict(cluster_clients[0].metrics)
@@ -80,7 +55,6 @@ class BoxFedv2(FedAvg):
         results: List[Tuple[ClientProxy, FitRes]],
         failures: List[Union[Tuple[ClientProxy, FitRes], BaseException]]
     ) -> Tuple[Optional[Parameters], Dict[str, Scalar]]:
-        """Aggregate fit results using weighted average."""
 
         cluster_data = {}
 
@@ -95,22 +69,26 @@ class BoxFedv2(FedAvg):
         cluster_results = {}
 
         for cluster_id, _ in cluster_data.items():
-            cluster_results[cluster_id] = self.aggregate_cluster(cluster_id, cluster_data[cluster_id])
-            
-                
+            if len(cluster_data[cluster_id]) > 1:
+                cluster_results[cluster_id] = self.aggregate_cluster(cluster_id, cluster_data[cluster_id])
+
         weights_results = [parameters_to_ndarrays(fit_res.parameters) for _, fit_res in cluster_results.items()]
 
         num_examples = [fit_res.num_examples for _, fit_res in cluster_results.items()]
         ids = [int(fit_res.metrics["id"]) for _, fit_res in cluster_results.items()]
 
+        for _, v in cluster_data.items():
+            if len(v) == 1:
+                fit_res = v[0]
+                weights_results.append(parameters_to_ndarrays(fit_res.parameters))
+                num_examples.append(fit_res.num_examples)
+                ids.append(int(fit_res.metrics["cluster_id"]))
 
-        global_params = parameters_to_ndarrays(self.current_parameters)
-        cluster_params_list = [parameters_to_ndarrays(fit_res.parameters) for _, fit_res in cluster_results.items()]
-        local_updates = [[w - g for w, g in zip(cluster_params, global_params)] for cluster_params in cluster_params_list]
+        local_updates = np.array(weights_results, dtype=object) - np.array(parameters_to_ndarrays(self.current_parameters), dtype=object)
 
-        local_gradients = [[-u / self.learning_rate for u in cluster_update] for cluster_update in local_updates]
+        local_gradients = -local_updates/self.learning_rate
 
-        global_gradient = [sum([n * cluster_grad[i] for n, cluster_grad in zip(num_examples, local_gradients)]) / sum(num_examples) for i in range(len(global_params))]
+        global_gradient = np.sum(np.array(num_examples).reshape(len(num_examples), 1) * local_gradients, axis=0) / sum(num_examples)
 
         local_grad_vectors = [np.concatenate([arr for arr in local_gradient], axis = None)
                               for local_gradient in local_gradients]
@@ -134,13 +112,20 @@ class BoxFedv2(FedAvg):
 
         weights = num_examples * np.exp(maps) / sum(num_examples * np.exp(maps))
 
-        parameters_aggregated = [sum([w * cluster_params[i] for w, cluster_params in zip(weights, cluster_params_list)]) for i in range(len(global_params))]
+        parameters_aggregated = np.sum(weights.reshape(len(weights), 1) * np.array(weights_results, dtype=object), axis=0)
 
         self.current_parameters = ndarrays_to_parameters(parameters_aggregated)
         metrics_aggregated = {}
 
         losses = [fit_res.num_examples * fit_res.metrics["loss"] for _, fit_res in cluster_results.items()]
         corrects = [round(fit_res.num_examples * fit_res.metrics["accuracy"]) for _, fit_res in cluster_results.items()]
+        
+        for _, v in cluster_data.items():
+            if len(v) == 1:
+                fit_res = v[0]
+                losses.append(fit_res.num_examples * fit_res.metrics["loss"])
+                corrects.append(round(fit_res.num_examples * fit_res.metrics["accuracy"]))
+                loss = sum(losses) / sum(num_examples)
 
         loss = sum(losses) / sum(num_examples)
         accuracy = sum(corrects) / sum(num_examples)
