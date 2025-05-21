@@ -13,7 +13,7 @@ class SCAFFOLD(FedAvg):
        
 
         self.c_global = [torch.zeros_like(param) for param in self.net.parameters()]
-        self.current_weights = parameters_to_ndarrays(self.current_parameters)
+        self.current_weights = [w.astype(np.float32) for w in parameters_to_ndarrays(self.current_parameters)]
         self.num_clients = self.num_clients
         self.global_learning_rate = self.learning_rate
 

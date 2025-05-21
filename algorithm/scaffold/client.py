@@ -10,7 +10,6 @@ class SCAFFOLD_CLIENT(BaseClient):
         self.c_local = c_local
 
     def fit(self, parameters, config):
-        """Train the model with data of this client."""
         set_parameters(self.net, parameters)
         lr = config['learning_rate']
         self.optimizer = torch.optim.SGD(self.net.parameters(), lr=lr)
@@ -28,11 +27,8 @@ class SCAFFOLD_CLIENT(BaseClient):
         return self.get_parameters(self.net), len(self.trainloader.dataset), results
     
     def train_scaffold(self, net, trainloader, epochs, learning_rate, device, config, c_local, parameters):
-        """Train the model on the training set."""
         c_global_bytes = config['c_global']
-        # Deserialize c_global list from bytes to float64
         c_global = np.frombuffer(c_global_bytes, dtype=np.float64)
-        # Cache trainable global parameters
         global_weight = [param.detach().clone() for param in self.net.parameters()]
         if c_local is None:
             log(INFO, f"No cache found for c_local")
