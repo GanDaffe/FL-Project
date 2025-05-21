@@ -6,7 +6,6 @@ from import_algo import *
 from algorithm.moon.moon_model import init_model
 
 def run_simulation(
-        algo, 
         trainloaders,
         testloader,
         client_cluster_index,
@@ -17,8 +16,10 @@ def run_simulation(
         client_dataset_ratio
     ):
     
+    algo = exp_config['algo']
     device = exp_config['device'] 
     model_name = model_config['model_name']
+    
     net = init_model(model_name, model_config).to(device) if algo == 'moon' else get_model(model_name, model_config).to(device)
 
     def base_client_fn(cid: str): 

@@ -39,18 +39,16 @@ if __name__ == '__main__':
 
     run_config = {
         'dataset_name':             'fmnist',  # emnist / fmnist / cifar10 / cifar100 / sentimen140 (take long time to load)
-        'iids':                     10, 
-        'non_iids':                 50, 
-        'model_name':               'mlp'
+        'model_name':               'mlp', 
+        'alpha':                    [0.5, 0.7, 0.9, 1]
     }
 
     experiment_config = {
-        'exp_name':                 f'{run_config["dataset_name"]}_({run_config["iids"]}, {run_config["non_iids"]})_{run_config["model_name"]}',
+        'exp_name':                 f'{run_config["dataset_name"]}_{run_config["model_name"]}',
         'algo':                     'fedadpimp',  #All letters in lowercase, no space
         'num_round':                500, 
-        'iids':                     run_config['iids'], 
-        'num_clients':              run_config['iids'] + run_config['non_iids'],
-        'batch_size':               100,
+        'num_clients':              60,
+        'batch_size':               32,
         'cluster_distance':         'hellinger', # hellinger / jensenshannon / cosine ... for fedadpimp experiment only
         'learning_rate':            0.1,
         'device':                   DEVICE
@@ -68,9 +66,9 @@ if __name__ == '__main__':
 
 
     ids, dist, trainloaders, testloader, client_dataset_ratio = get_train_data(dataset_name=run_config['dataset_name'], 
-                                                                               num_iids=run_config['iids'], 
-                                                                               num_non_iids=run_config['non_iids'],
-                                                                               batch_size=experiment_config['batch_size']
+                                                                               num_clients=experiment_config['num_clients'], 
+                                                                               batch_size=experiment_config['batch_size'],
+                                                                               alphas=run_config['alpha']
                                                                             )
     client_cluster_index, distrib_ = clustering(dist, 
                                                 distance=experiment_config['cluster_distance'], 
@@ -98,7 +96,6 @@ if __name__ == '__main__':
     # ------------ RUN SIMULATION ---------------
     
     run_simulation(
-        experiment_config['algo'], 
         trainloaders,
         testloader, 
         client_cluster_index, 

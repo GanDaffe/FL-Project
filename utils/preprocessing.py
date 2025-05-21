@@ -21,6 +21,7 @@ from torch.utils.data import DataLoader, random_split, SubsetRandomSampler
 from utils.distance import hellinger, jensen_shannon_divergence_distance
 from datasets import load_dataset 
 import re
+
 def clean_text(tweet):
     urlPattern = r"((http://)[^ ]*|(https://)[^ ]*|(www\.)[^ ]*)"
     userPattern = '@[^\s]+'
@@ -161,12 +162,16 @@ def clustering(dist, min_smp=3, xi=0.2, distance='manhattan', noise_level=0.05):
 
     return client_cluster_index, distrib_
 
-def partition_data(dataset, _iid: int, non_iid_diff : int, num_clients: int, alpha: float, beta: float, classes_name, dataset_name='cifar10'):
-    assert _iid + non_iid_diff <= num_clients, 'Check num_iid, non_iid_diff and num_clients.'
+def partition_data(dataset,
+                   num_clients,
+                   alpha,
+                   classes_name):
+
     num_classes = len(classes_name)
 
     client_size = len(dataset) // num_clients
     label_size = len(dataset) // num_classes
+
     indices_class = [[] for _ in range(num_classes)]
 
     for i, lab in enumerate(dataset.targets):
@@ -177,7 +182,7 @@ def partition_data(dataset, _iid: int, non_iid_diff : int, num_clients: int, alp
     label_dist = []
 
     for i in tqdm(range(num_clients)):
-        concentration = torch.ones(len(labels)) * (alpha if i < _iid else beta)
+        concentration = torch.ones(len(labels)) * alpha
         dist = Dirichlet(concentration).sample()
 
         client_indices = []
@@ -198,7 +203,6 @@ def partition_data(dataset, _iid: int, non_iid_diff : int, num_clients: int, alp
         ids.append(client_indices)
         counter = Counter(list(map(lambda x: dataset[x][1], ids[i])))
         label_dist.append({classes_name[j]: counter.get(j, 0) for j in range(num_classes)})
-
 
     return ids, label_dist
 
@@ -227,73 +231,49 @@ def partition_data_special_case(trainset, num_clients: int, num_iids: int):
         label_dist.append({classes[i]: counter.get(i, 0) for i in range(len(classes))})
 
     return ids, label_dist
-    
-def get_train_data(dataset_name, 
-                   num_iids: int, 
-                   num_non_iids, 
-                   num_folds: int = 3, 
-                   batch_size = 100,
-                   alpha: list = [1, 3, 5], 
+
+
+def get_train_data(dataset_name,
+                   num_clients,
+                   batch_size, 
+                   alphas: list = [0.5, 0.7, 0.9, 1],
                    special_case = False):
 
+    num_folds = len(alphas)
     trainset, testset = load_data(dataset_name)
-    FOLDS = num_folds
-    NUM_CLIENTS = num_iids + num_non_iids
-    NUM_IIDS = num_iids
-    NON_IIDS = num_non_iids
 
-    base = len(trainset) // FOLDS
-    extra = len(trainset) % FOLDS
+    base = len(trainset) // num_folds
+    extra = len(trainset) % num_folds
     classes = trainset.classes
 
-    fold_len = [base + 1 if i < extra else base for i in range(FOLDS)]
+    fold_len = [base + 1 if i < extra else base for i in range(num_folds)]
     partition_fold = random_split(trainset, fold_len)
 
-    base_clients = NUM_CLIENTS // FOLDS
-    extra_clients = NUM_CLIENTS % FOLDS
-    clients_per_fold = [base_clients + 1 if i < extra_clients else base_clients for i in range(FOLDS)]
-
-    base_iids = NUM_IIDS // FOLDS
-    base_non_iids = NON_IIDS // FOLDS
-    extra_iids = NUM_IIDS % FOLDS
-    extra_non_iids = NON_IIDS % FOLDS
-
-    iids_per_fold = [base_iids + 1 if i < extra_iids else base_iids for i in range(FOLDS)]
-    non_iids_per_fold = [base_non_iids + 1 if i < extra_non_iids else base_non_iids for i in range(FOLDS)]
-
-    for i in range(FOLDS):
-        total_clients = iids_per_fold[i] + non_iids_per_fold[i]
-        if total_clients > clients_per_fold[i]:
-            excess = total_clients - clients_per_fold[i]
-            clients_per_fold[i] += excess
-        elif total_clients < clients_per_fold[i]:
-            missing = clients_per_fold[i] - total_clients
-            clients_per_fold[i] -= missing
-            iids_per_fold[i] += (missing - 1)
+    base_clients = num_clients // num_folds
+    extra_clients = num_clients % num_folds
+    clients_per_fold = [base_clients + 1 if i < extra_clients else base_clients for i in range(num_folds)]
 
     ids, labels_dist = [], []
 
-    for i in range(FOLDS):
+    for i in range(num_folds):
         sub_set = partition_fold[i]
-        
         if dataset_name in ['cifar10', 'cifar100','sentimen140']:
             data = [trainset.data[idx] for idx in sub_set.indices]
             targets = [trainset.targets[idx] for idx in sub_set.indices]
-        else: 
+        else:
             data = trainset.data[sub_set.indices]
             targets = trainset.targets[sub_set.indices].tolist()
+
         sub_dataset = CustomDataset(data, targets)
-        
-        if special_case: 
-            id, dist = partition_data_special_case(sub_dataset, clients_per_fold[i], iids_per_fold[i])
-        else: 
+
+        if special_case:
+            id, dist = partition_data_special_case(sub_dataset, clients_per_fold[i])
+        else:
             id, dist = partition_data(
                 sub_dataset,
-                iids_per_fold[i],
-                non_iids_per_fold[i],
                 clients_per_fold[i],
-                alpha[i], 0.05,
-                classes, dataset_name
+                alphas[i],
+                classes,
             )
 
         ids.extend(id)
@@ -301,10 +281,11 @@ def get_train_data(dataset_name,
 
     trainloaders = []
 
-    for i in range(NUM_CLIENTS):
+    for i in range(num_clients):
         trainloaders.append(DataLoader(trainset, batch_size=batch_size, sampler=SubsetRandomSampler(ids[i])))
     testloader = DataLoader(testset, batch_size=batch_size)
-
-    client_dataset_ratio: float = int(len(trainset) / NUM_CLIENTS) / len(trainset)
-
+    
+    client_dataset_ratio: float = int(len(trainset) / num_clients) / len(trainset)
+    
     return ids, labels_dist, trainloaders, testloader, client_dataset_ratio
+
